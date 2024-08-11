@@ -1,16 +1,6 @@
-interface Jump {
-  pos: number;
-  idx: number;
-}
-
-class Command {
-  instruction: string;
+type Command = {
+  instr: string;
   param: number;
-
-  constructor(inst: string, parm: number) {
-    this.instruction = inst;
-    this.param = parm;
-  }
 }
 
 const INSTRUCTIONS = "[<+-.,>]";
@@ -22,93 +12,18 @@ class Brainfck {
   head: number;
   prog: Command[];
   mem: number[];
-  patch: Jump[];
+  patch: number[];
 
   constructor(code: string) {
     this.code = code;
     this.pc = 0;
     this.head = 0;
-    this.mem = [];
     this.prog = [];
     this.patch = [];
 
-    this.compile();
-  }
+    this.mem = new Array(2 ** 16).fill(0);
 
-  getInstruction(c: string): string {
-    if (INSTRUCTIONS.includes(c)) return c;
-    return undefined;
-  }
-
-  createCommand(): Command | undefined {
-
-    const c = this.code.charAt(this.pc);
-
-    switch (c) {
-      case "[":
-        this.pc++;
-        // add jump address to stack
-        this.patch.push({
-          pos: this.pc,
-          idx: this.prog.length
-        });
-
-        return new Command(this.getInstruction(c), 1);
-
-      case "]":
-        this.pc++;
-        // pop address and patch the jump
-        const j = this.patch.pop();
-        this.prog[j.idx].param = this.pc;
-
-        return new Command(this.getInstruction(c), j.pos);
-
-      default:
-        if (this.getInstruction(c) !== undefined) {
-          // this is real instruction
-          this.pc++;
-          let cnt = 1;
-
-          // count instructions amount
-          while (true) {
-            const s = this.code.charAt(this.pc);
-
-            // if next instruction is equals to the first
-            // add count and advance prog counter
-            if (s === c) {
-              this.pc++;
-              cnt++;
-
-            } else {
-
-              // if instruction is undefined just advance prog counter
-              if (this.getInstruction(s) === undefined) {
-                this.pc++;
-
-              } else {
-                // if next instruction is different from the first one
-                // return a new Command
-                return new Command(this.getInstruction(c), cnt);
-
-              }
-            }
-          }
-
-        } else {
-          // instruction in pc is undefinde - goto next
-          this.pc++;
-
-        }
-    }
-
-    return undefined;
-  }
-
-  execute(): void {
-    debugger
-  }
-
-  compile(): void {
+    // compile
     while (this.pc < this.code.length) {
       const cmd = this.createCommand();
       if (cmd !== undefined) this.prog.push(cmd);
@@ -117,8 +32,89 @@ class Brainfck {
     this.execute();
   }
 
+  isInstruction(c: string): boolean {
+    return INSTRUCTIONS.includes(c);
+  }
+
+  createCommand(): Command {
+    const c = this.code.charAt(this.pc++);
+
+    switch (c) {
+      case "[":
+        this.patch.push(this.prog.length + 1);
+        return { instr: c, param: 0xbadf00d };
+
+      case "]":
+        const j = this.patch.pop();
+        this.prog[j - 1].param = this.prog.length + 1;
+        return { instr: c, param: j };
+
+      default:
+        if (this.isInstruction(c)) {
+          let cnt = 1;
+
+          while (true) {
+            const s = this.code.charAt(this.pc);
+
+            if (!this.isInstruction(s) || s !== c) {
+              return { instr: c, param: cnt };
+            }
+            cnt++;
+            this.pc++;
+          }
+        }
+    }
+
+    return undefined;
+  }
+
+  execute(): void {
+    let progIdx = 0;
+    while (progIdx < this.prog.length) {
+      const cmd = this.prog[progIdx];
+
+      switch (cmd.instr) {
+        case "+":
+          this.mem[this.head] += cmd.param;
+          break;
+        case "-":
+          this.mem[this.head] -= cmd.param;
+          break;
+        case ">":
+          this.head += cmd.param;
+          break;
+        case "<":
+          this.head -= cmd.param;
+          break;
+        case ".":
+          for (let i = 0; i < cmd.param; i++)
+            console.log(this.mem[this.head]);
+          break;
+        case ",":
+          let c: string;
+          for (let i = 0; i < cmd.param; i++) {
+            c = prompt("Enter a value:");
+            this.mem[this.head] = c.charCodeAt(0);
+          }
+          break;
+        case "[":
+          if (this.mem[this.head] === 0) {
+            progIdx = cmd.param;
+            continue;
+          }
+          break;
+        case "]":
+          if (this.mem[this.head] !== 0) {
+            progIdx = cmd.param;
+            continue;
+          }
+          break;
+      }
+
+      progIdx++;
+    }
+  }
 }
 
 const c = "++++++[>++++++++++<-]>++++++.++++.<+++++[>----<-]>.<+++++[>++<-]>+++++++.<+++++[>----<-]>----..";
-//const c = "++er ++ ++[>++<] test +"
 const b = new Brainfck(c);
