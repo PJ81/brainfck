@@ -40,7 +40,7 @@ class Brainfck {
     return undefined;
   }
 
-  getNextCommand(): Command | undefined {
+  createCommand(): Command | undefined {
 
     const c = this.code.charAt(this.pc);
 
@@ -110,7 +110,7 @@ class Brainfck {
 
   compile(): void {
     while (this.pc < this.code.length) {
-      const cmd = this.getNextCommand();
+      const cmd = this.createCommand();
       if (cmd !== undefined) this.prog.push(cmd);
     }
 
