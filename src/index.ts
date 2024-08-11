@@ -1,31 +1,19 @@
-enum Cmd {
-  NOP = "",
-  INC_MEM = "+",
-  DEC_MEM = "-",
-  INC_HEAD = ">",
-  DEC_HEAD = "<",
-  OUTPUT = ".",
-  INPUT = ",",
-  JPZ = "[",
-  JPNZ = "]"
-}
-
-type Instruction = Cmd | undefined;
-
 interface Jump {
   pos: number;
   idx: number;
 }
 
 class Command {
-  instruction: Instruction;
+  instruction: string;
   param: number;
 
-  constructor(inst: Instruction, parm: number) {
+  constructor(inst: string, parm: number) {
     this.instruction = inst;
     this.param = parm;
   }
 }
+
+const INSTRUCTIONS = "[<+-.,>]";
 
 class Brainfck {
 
@@ -47,14 +35,8 @@ class Brainfck {
     this.compile();
   }
 
-  getInstruction(c: string): Instruction {
-    // Iterate over all enum values
-    for (const key in Cmd) {
-      if (Cmd[key as keyof typeof Cmd] === c) {
-        return Cmd[key as keyof typeof Cmd];
-      }
-    }
-    // Return undefined if no match is found
+  getInstruction(c: string): string {
+    if (INSTRUCTIONS.includes(c)) return c;
     return undefined;
   }
 
